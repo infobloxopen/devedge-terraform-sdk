@@ -79,6 +79,14 @@ on that JSON to emit schema+models, and finally templates the CRUD glue.
 | `enum` / `allowed_values` | `stringvalidator.OneOf(...)` validator |
 | storage `not_null` | **not** mapped to required (a NOT NULL column is not a client-required field) |
 
+Scalar types project directly, with one convention to note: an `int64` or
+`int32` proto field surfaces as a Terraform `String` attribute, not a number.
+The enriched OpenAPI types 64-bit integers as `string` with `format: int64` —
+the standard protobuf-JSON encoding that avoids client-side precision loss — and
+`tfgen` carries that type through. A bare HCL number literal is accepted (coerced
+to string), but `terraform plan` and `terraform show` display the value quoted;
+use `tonumber()` when you need arithmetic on it.
+
 The mapping lives in the framework-free `tfkit/behavior` package, so the
 generator can depend on it without pulling the Terraform runtime into its
 dependency graph.
@@ -104,8 +112,8 @@ is free of the Terraform runtime); it is not a public import surface.
 The fastest path to a working provider is to scaffold one with the devedge CLI:
 
 ```bash
-de terraform new --provider toy --spec ./openapi/toy.openapi.yaml
-de terraform add --resource widget --spec ./openapi/toy.openapi.yaml
+de terraform new toy
+de terraform add --input ./openapi/toy.openapi.yaml --resource widget
 ```
 
 `de terraform add` runs `tfgen` against a service's enriched OpenAPI spec and

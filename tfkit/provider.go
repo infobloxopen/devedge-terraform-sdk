@@ -18,6 +18,7 @@ import (
 type ProviderModel struct {
 	Endpoint types.String `tfsdk:"endpoint"`
 	Token    types.String `tfsdk:"token"`
+	Headers  types.Map    `tfsdk:"headers"`
 }
 
 // ProviderConfig configures [NewProvider]. A generated (or scaffolded) provider
@@ -78,6 +79,11 @@ func (p *baseProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp 
 				Sensitive:   true,
 				Description: fmt.Sprintf("Bearer token for authentication. May also be set via the %s environment variable.", p.cfg.TokenEnv),
 			},
+			"headers": providerschema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "Extra headers sent on every request. Use for local dev against a service whose authorizer reads request metadata rather than a bearer token, e.g. { \"account-id\" = \"t1\", \"groups\" = \"admin\" }.",
+			},
 		},
 	}
 }
@@ -101,7 +107,16 @@ func (p *baseProvider) Configure(ctx context.Context, req provider.ConfigureRequ
 		return
 	}
 
-	client := NewClient(endpoint, token)
+	var headers map[string]string
+	if !m.Headers.IsNull() && !m.Headers.IsUnknown() {
+		headers = make(map[string]string, len(m.Headers.Elements()))
+		resp.Diagnostics.Append(m.Headers.ElementsAs(ctx, &headers, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	client := NewClientWithHeaders(endpoint, token, headers)
 	resp.ResourceData = client
 	resp.DataSourceData = client
 }
