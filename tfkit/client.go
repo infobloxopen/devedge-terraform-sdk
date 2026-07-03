@@ -21,6 +21,11 @@ type Client struct {
 	BaseURL string
 	// Token is the bearer token attached to every request (empty = no auth).
 	Token string
+	// Headers are extra headers attached to every request. Use them for local
+	// dev against a service whose authorizer reads request metadata rather than a
+	// bearer token — e.g. {"account-id": "t1", "groups": "admin"} for a devedge-sdk
+	// dev authorizer. Empty by default.
+	Headers map[string]string
 	// HTTP is the underlying client; defaults to http.DefaultClient.
 	HTTP *http.Client
 }
@@ -28,6 +33,12 @@ type Client struct {
 // NewClient returns a [Client] for baseURL with the given bearer token.
 func NewClient(baseURL, token string) *Client {
 	return &Client{BaseURL: baseURL, Token: token, HTTP: &http.Client{}}
+}
+
+// NewClientWithHeaders returns a [Client] for baseURL with the given bearer token
+// and extra request headers.
+func NewClientWithHeaders(baseURL, token string, headers map[string]string) *Client {
+	return &Client{BaseURL: baseURL, Token: token, Headers: headers, HTTP: &http.Client{}}
 }
 
 // Do issues an authed JSON request and decodes a 2xx body into out (when
@@ -60,6 +71,11 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 	req.Header.Set("Accept", "application/json")
 	if c.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	for k, v := range c.Headers {
+		if k != "" {
+			req.Header.Set(k, v)
+		}
 	}
 	client := c.HTTP
 	if client == nil {
