@@ -1,0 +1,83 @@
+version: 2
+
+project_name: devedge-terraform-sdk
+
+# This repo is the SDK — it releases the tfgen generator and the tfkit-doctor
+# diagnostics binary, exactly like devedge-cli-sdk releases cligen/clikit-doctor.
+# It is NOT a Terraform provider release (no registry manifest / GPG signing);
+# that shape belongs to a scaffolded provider repo, which `de terraform new`
+# handles.
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: tfgen
+    main: ./cmd/tfgen
+    binary: tfgen
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+  - id: tfkit-doctor
+    main: ./cmd/tfkit-doctor
+    binary: tfkit-doctor
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: default
+    builds:
+      - tfgen
+      - tfkit-doctor
+    name_template: "devedge-terraform-sdk_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: tar.gz
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: infobloxopen
+    name: devedge-terraform-sdk
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}}-v{{.Version}}"

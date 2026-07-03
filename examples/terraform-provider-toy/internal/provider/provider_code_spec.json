@@ -1,0 +1,170 @@
+{
+  "provider": {
+    "name": "toy"
+  },
+  "resources": [
+    {
+      "name": "widget",
+      "schema": {
+        "attributes": [
+          {
+            "name": "archived_time",
+            "string": {
+              "computed_optional_required": "computed",
+              "description": "AIP-136: set by ArchiveWidget; non-nil means the widget is archived.",
+              "plan_modifiers": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+                      }
+                    ],
+                    "schema_definition": "stringplanmodifier.UseStateForUnknown()"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "category",
+            "string": {
+              "computed_optional_required": "optional",
+              "description": "category is a string-backed enum (allowed_values → OpenAPI enum, AC-4).",
+              "validators": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+                      }
+                    ],
+                    "schema_definition": "stringvalidator.OneOf(\"standard\", \"premium\")"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "color",
+            "string": {
+              "computed_optional_required": "optional",
+              "description": "color is IMMUTABLE (explicit field_behavior): set at create, never updated.",
+              "plan_modifiers": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+                      }
+                    ],
+                    "schema_definition": "stringplanmodifier.RequiresReplace()"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "delete_time",
+            "string": {
+              "computed_optional_required": "computed",
+              "description": "AIP-148: soft-delete timestamp; set by Delete, cleared by Undelete.",
+              "plan_modifiers": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+                      }
+                    ],
+                    "schema_definition": "stringplanmodifier.UseStateForUnknown()"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "display_name",
+            "string": {
+              "computed_optional_required": "required",
+              "description": "display_name is client-REQUIRED (explicit field_behavior)."
+            }
+          },
+          {
+            "name": "etag",
+            "string": {
+              "computed_optional_required": "optional"
+            }
+          },
+          {
+            "name": "id",
+            "string": {
+              "computed_optional_required": "optional",
+              "description": "id is USER_SETTABLE (AIP-133): the annotation alone derives IMMUTABLE for the",
+              "plan_modifiers": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+                      }
+                    ],
+                    "schema_definition": "stringplanmodifier.RequiresReplace()"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "name",
+            "string": {
+              "computed_optional_required": "computed",
+              "description": "name is the AIP-122 resource name, e.g. \"widgets/abc123\".",
+              "plan_modifiers": [
+                {
+                  "custom": {
+                    "imports": [
+                      {
+                        "path": "github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+                      }
+                    ],
+                    "schema_definition": "stringplanmodifier.UseStateForUnknown()"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "parent_id",
+            "string": {
+              "computed_optional_required": "optional",
+              "description": "parent_id is a cross-service reference to another Widget (AIP-124). Widget is"
+            }
+          },
+          {
+            "name": "secret_token",
+            "string": {
+              "computed_optional_required": "optional",
+              "description": "secret_token is write-only material (secret → INPUT_ONLY): accepted on write,",
+              "sensitive": true
+            }
+          },
+          {
+            "name": "sku",
+            "string": {
+              "computed_optional_required": "optional",
+              "description": "sku is storage NOT NULL but NOT client-required — proving not_null is never"
+            }
+          },
+          {
+            "name": "weight",
+            "int64": {
+              "computed_optional_required": "optional"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "version": "0.1"
+}

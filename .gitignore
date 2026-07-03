@@ -1,0 +1,25 @@
+# Build output
+/dist/
+/bin/
+
+# Built binaries left in the working tree (anchored so committed generated
+# provider SOURCE under examples/ is never ignored)
+/tfgen
+/tfkit-doctor
+/examples/terraform-provider-toy/terraform-provider-toy
+
+# Terraform working files (should not appear here, but keep them out)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+
+# Test / coverage artifacts
+*.out
+*.test
+coverage.txt
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
