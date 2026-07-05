@@ -16,6 +16,16 @@ import (
 func WidgetResourceSchema(ctx context.Context) schema.Schema {
 	return schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"account_id": schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Description:         "account_id is the tenant key: set by the server from the auth context and",
+				MarkdownDescription: "account_id is the tenant key: set by the server from the auth context and",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"archived_time": schema.StringAttribute{
 				Computed:            true,
 				Description:         "AIP-136: set by ArchiveWidget; non-nil means the widget is archived.",
@@ -58,10 +68,12 @@ func WidgetResourceSchema(ctx context.Context) schema.Schema {
 			},
 			"id": schema.StringAttribute{
 				Optional:            true,
+				Computed:            true,
 				Description:         "id is USER_SETTABLE (AIP-133): the annotation alone derives IMMUTABLE for the",
 				MarkdownDescription: "id is USER_SETTABLE (AIP-133): the annotation alone derives IMMUTABLE for the",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -96,6 +108,7 @@ func WidgetResourceSchema(ctx context.Context) schema.Schema {
 }
 
 type WidgetModel struct {
+	AccountId    types.String `tfsdk:"account_id"`
 	ArchivedTime types.String `tfsdk:"archived_time"`
 	Category     types.String `tfsdk:"category"`
 	Color        types.String `tfsdk:"color"`

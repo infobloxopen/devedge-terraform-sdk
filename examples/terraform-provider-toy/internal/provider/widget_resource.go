@@ -43,6 +43,7 @@ func (r *widgetResource) Configure(_ context.Context, req resource.ConfigureRequ
 // are excluded — the service sets them.
 func (m WidgetModel) createBody() map[string]any {
 	body := map[string]any{}
+	tfkit.SetString(body, "accountId", m.AccountId)
 	tfkit.SetString(body, "category", m.Category)
 	tfkit.SetString(body, "color", m.Color)
 	tfkit.SetString(body, "displayName", m.DisplayName)
@@ -72,6 +73,7 @@ func (m WidgetModel) updateBody() (map[string]any, []string) {
 // apply copies a decoded API object onto the model. INPUT_ONLY fields are not
 // echoed by the service, so they keep the value the plan/state already holds.
 func (m *WidgetModel) apply(data map[string]any) {
+	m.AccountId = tfkit.GetString(data, "accountId")
 	m.ArchivedTime = tfkit.GetString(data, "archivedTime")
 	m.Category = tfkit.GetString(data, "category")
 	m.Color = tfkit.GetString(data, "color")

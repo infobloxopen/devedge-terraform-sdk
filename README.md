@@ -74,6 +74,7 @@ on that JSON to emit schema+models, and finally templates the CRUD glue.
 |---|---|
 | native `required` / `field_behavior: REQUIRED` | `Required` attribute |
 | `readOnly` / `OUTPUT_ONLY` | `Computed` attribute (+ `UseStateForUnknown` plan modifier) |
+| resource identity (the resource key, e.g. `id`) and the tenant key `account_id` | `computed_optional` attribute (+ `UseStateForUnknown` plan modifier): the client may set it, but the server supplies it when omitted, so a server-set value is not an "inconsistent result after apply" |
 | `IMMUTABLE` | disposition kept, plus a `RequiresReplace()` plan modifier |
 | `writeOnly` / secret / `INPUT_ONLY` | `Sensitive` attribute; excluded from response-apply so the plan value is preserved |
 | `enum` / `allowed_values` | `stringvalidator.OneOf(...)` validator |

@@ -94,6 +94,15 @@ components:
         v1Widget:
             description: Widget is the resource managed by WidgetService.
             properties:
+                accountId:
+                    description: |-
+                        account_id is the tenant key: set by the server from the auth context and
+                        IMMUTABLE. It carries no OUTPUT_ONLY behavior (a client MAY assert it), yet
+                        the server populates it when omitted — so tfgen maps it to computed_optional
+                        + UseStateForUnknown, never plain optional (issue #7).
+                    type: string
+                    x-aip-field-behavior:
+                        - IMMUTABLE
                 archivedTime:
                     description: 'AIP-136: set by ArchiveWidget; non-nil means the widget is archived.'
                     format: date-time

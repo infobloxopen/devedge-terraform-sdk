@@ -20,6 +20,12 @@ const (
 	Immutable = "IMMUTABLE"
 )
 
+// AccountKey is the conventional tenant-key attribute name. Like the resource
+// identity, it is server-populated (set from the auth context) and immutable,
+// so the generator treats it as identity for Terraform semantics (see
+// [Resolve]'s identity rule).
+const AccountKey = "account_id"
+
 // Disposition is the ComputedOptionalRequired value of a Provider Code
 // Specification attribute.
 type Disposition string
@@ -51,22 +57,31 @@ type Semantics struct {
 
 // Resolve maps native OpenAPI signals (required membership, readOnly,
 // writeOnly) plus explicit x-aip-field-behavior tokens to Terraform schema
-// [Semantics].
+// [Semantics]. The identity flag marks the resource identity (the resource key,
+// e.g. id) and the tenant key ([AccountKey]) — fields the server populates when
+// the client omits them.
 //
 // The rules, in order:
 //
 //   - OUTPUT_ONLY / readOnly wins → computed (+ UseStateForUnknown to stabilize
 //     the value across plans). A computed field is never required or optional.
 //   - otherwise REQUIRED / native-required → required.
+//   - otherwise identity → computed_optional (+ UseStateForUnknown). The client
+//     may set the value, but the server supplies it when omitted; a plain
+//     optional attribute whose value the server fills in makes `terraform apply`
+//     fail with "Provider produced inconsistent result after apply". Marking it
+//     computed_optional lets Terraform tolerate the server-populated value and
+//     UseStateForUnknown holds it stable across plans.
 //   - otherwise → optional.
-//   - IMMUTABLE (and not output-only) keeps the required/optional disposition
-//     and adds RequiresReplace: the field is set once and changing it forces a
-//     new resource.
+//   - IMMUTABLE (and not output-only) keeps the disposition and adds
+//     RequiresReplace: the field is set once and changing it forces a new
+//     resource. This composes with the identity rule — an immutable identity is
+//     computed_optional + UseStateForUnknown + RequiresReplace.
 //   - INPUT_ONLY / writeOnly → sensitive.
 //
 // Storage-only signals such as not_null are deliberately NOT inputs here: a
 // column being NOT NULL never makes a client field required.
-func Resolve(behaviors []string, nativeRequired, readOnly, writeOnly bool) Semantics {
+func Resolve(behaviors []string, nativeRequired, readOnly, writeOnly, identity bool) Semantics {
 	set := make(map[string]bool, len(behaviors))
 	for _, b := range behaviors {
 		set[b] = true
@@ -82,6 +97,9 @@ func Resolve(behaviors []string, nativeRequired, readOnly, writeOnly bool) Seman
 		s.UseStateForUnknown = true
 	case required:
 		s.Disposition = DispRequired
+	case identity:
+		s.Disposition = DispComputedOptional
+		s.UseStateForUnknown = true
 	default:
 		s.Disposition = DispOptional
 	}
