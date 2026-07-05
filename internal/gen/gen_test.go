@@ -66,13 +66,28 @@ func TestParseModelFieldBehavior(t *testing.T) {
 	if byName["sku"].Semantics.Disposition != behavior.DispOptional {
 		t.Fatalf("sku (not_null, no behavior) must be optional, got %q", byName["sku"].Semantics.Disposition)
 	}
-	// IMMUTABLE → RequiresReplace, disposition preserved (optional here).
-	for _, n := range []string{"color", "id"} {
-		if !byName[n].Semantics.RequiresReplace {
-			t.Fatalf("%s should require replace", n)
+	// IMMUTABLE → RequiresReplace, disposition preserved (optional) for a plain
+	// non-identity field such as color.
+	if !byName["color"].Semantics.RequiresReplace {
+		t.Fatalf("color should require replace")
+	}
+	if byName["color"].Semantics.Disposition != behavior.DispOptional {
+		t.Fatalf("color should stay optional, got %q", byName["color"].Semantics.Disposition)
+	}
+	// Resource identity (id) and the tenant key (account_id) are server-populated
+	// → computed_optional + UseStateForUnknown so a server-set value is not an
+	// "inconsistent result after apply" (issue #7). IMMUTABLE still adds
+	// RequiresReplace on top.
+	for _, n := range []string{"id", "accountId"} {
+		f := byName[n]
+		if f.Semantics.Disposition != behavior.DispComputedOptional {
+			t.Fatalf("%s should be computed_optional, got %q", n, f.Semantics.Disposition)
 		}
-		if byName[n].Semantics.Disposition != behavior.DispOptional {
-			t.Fatalf("%s should stay optional, got %q", n, byName[n].Semantics.Disposition)
+		if !f.Semantics.UseStateForUnknown {
+			t.Fatalf("%s should carry UseStateForUnknown", n)
+		}
+		if !f.Semantics.RequiresReplace {
+			t.Fatalf("%s (IMMUTABLE) should require replace", n)
 		}
 	}
 	// INPUT_ONLY / writeOnly → sensitive + input-only (excluded from apply).
@@ -91,6 +106,17 @@ func TestParseModelFieldBehavior(t *testing.T) {
 	if byName["parentId"].Reference == "" {
 		t.Fatalf("parentId should carry a reference")
 	}
+}
+
+// hasPlanModifier reports whether any string plan modifier's definition
+// mentions the given call (e.g. "RequiresReplace", "UseStateForUnknown").
+func hasPlanModifier(pms schema.StringPlanModifiers, call string) bool {
+	for _, pm := range pms {
+		if pm.Custom != nil && strings.Contains(pm.Custom.SchemaDefinition, call) {
+			return true
+		}
+	}
+	return false
 }
 
 // attrByName finds a resource attribute in the built spec.
@@ -127,13 +153,31 @@ func TestBuildSpecSemantics(t *testing.T) {
 	if got := attrByName(t, attrs, "name").String.ComputedOptionalRequired; got != schema.Computed {
 		t.Fatalf("name = %q, want computed", got)
 	}
-	// id IMMUTABLE → RequiresReplace plan modifier.
-	idPM := attrByName(t, attrs, "id").String.PlanModifiers
-	if len(idPM) != 1 || idPM[0].Custom == nil || !strings.Contains(idPM[0].Custom.SchemaDefinition, "RequiresReplace") {
-		t.Fatalf("id should have a RequiresReplace plan modifier, got %+v", idPM)
+	// id is resource identity + IMMUTABLE → computed_optional with both a
+	// RequiresReplace and a UseStateForUnknown plan modifier (issue #7).
+	idAttr := attrByName(t, attrs, "id").String
+	if idAttr.ComputedOptionalRequired != schema.ComputedOptional {
+		t.Fatalf("id = %q, want computed_optional", idAttr.ComputedOptionalRequired)
 	}
-	if len(idPM[0].Custom.Imports) != 1 || !strings.Contains(idPM[0].Custom.Imports[0].Path, "stringplanmodifier") {
-		t.Fatalf("id plan modifier import wrong: %+v", idPM[0].Custom.Imports)
+	if !hasPlanModifier(idAttr.PlanModifiers, "RequiresReplace") {
+		t.Fatalf("id should have a RequiresReplace plan modifier, got %+v", idAttr.PlanModifiers)
+	}
+	if !hasPlanModifier(idAttr.PlanModifiers, "UseStateForUnknown") {
+		t.Fatalf("id should have a UseStateForUnknown plan modifier, got %+v", idAttr.PlanModifiers)
+	}
+	for _, pm := range idAttr.PlanModifiers {
+		if pm.Custom == nil || len(pm.Custom.Imports) != 1 || !strings.Contains(pm.Custom.Imports[0].Path, "stringplanmodifier") {
+			t.Fatalf("id plan modifier import wrong: %+v", pm)
+		}
+	}
+
+	// account_id is the tenant key → computed_optional + UseStateForUnknown.
+	acctAttr := attrByName(t, attrs, "account_id").String
+	if acctAttr.ComputedOptionalRequired != schema.ComputedOptional {
+		t.Fatalf("account_id = %q, want computed_optional", acctAttr.ComputedOptionalRequired)
+	}
+	if !hasPlanModifier(acctAttr.PlanModifiers, "UseStateForUnknown") {
+		t.Fatalf("account_id should have a UseStateForUnknown plan modifier, got %+v", acctAttr.PlanModifiers)
 	}
 	// secret_token Sensitive.
 	if s := attrByName(t, attrs, "secret_token").String.Sensitive; s == nil || !*s {

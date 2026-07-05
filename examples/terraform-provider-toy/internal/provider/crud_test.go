@@ -52,6 +52,11 @@ func (f *fakeWidgets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		body["id"] = newID
 		body["name"] = "widgets/" + newID
+		// The service sets the tenant key from the auth context when the client
+		// omits it — the account_id case from issue #7.
+		if acct, _ := body["accountId"].(string); acct == "" {
+			body["accountId"] = "acct-" + newID
+		}
 		delete(body, "secretToken") // service strips write-only material
 		f.store[newID] = body
 		_ = json.NewEncoder(w).Encode(body)
@@ -62,6 +67,9 @@ func (f *fakeWidgets) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(v)
+	case r.Method == http.MethodDelete && id != "":
+		delete(f.store, id)
+		_ = json.NewEncoder(w).Encode(map[string]any{})
 	default:
 		http.Error(w, `{"message":"unhandled"}`, http.StatusBadRequest)
 	}

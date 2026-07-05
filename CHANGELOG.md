@@ -6,6 +6,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `tfgen`/`tfkit/behavior` — resource identity (the resource key, e.g. `id`) and
+  the tenant key (`account_id`) are now resolved to `computed_optional` +
+  `UseStateForUnknown` instead of plain `optional`. The server populates these
+  when the client omits them; as plain optional attributes their server-set
+  values made `terraform apply` fail with "Provider produced inconsistent result
+  after apply". An `IMMUTABLE` identity keeps its `RequiresReplace` modifier on
+  top. Adds a real `terraform plan`/`terraform apply` acceptance test (gated on
+  `TF_ACC`) proving a clean end-to-end apply and an empty re-plan. (#7)
+
 ### Added
 
 - `tfkit` — the provider runtime library: an authed `Client` (bearer + JSON

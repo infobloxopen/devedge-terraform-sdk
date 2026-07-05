@@ -192,7 +192,7 @@ func buildResource(schemaName string, schema *openapi3.Schema, res aipResource, 
 		if pref == nil || pref.Value == nil {
 			continue
 		}
-		r.Fields = append(r.Fields, buildField(pn, pref.Value, requiredSet[pn]))
+		r.Fields = append(r.Fields, buildField(pn, pref.Value, requiredSet[pn], isIdentity(pn, r.Key)))
 	}
 
 	for _, oi := range ops {
@@ -215,7 +215,22 @@ func buildResource(schemaName string, schema *openapi3.Schema, res aipResource, 
 	return r, nil
 }
 
-func buildField(name string, schema *openapi3.Schema, required bool) Field {
+// isIdentity reports whether a property is the resource identity (the resource
+// key, e.g. "id") or the conventional tenant key (account_id). Both are
+// server-populated when the client omits them, so the generator resolves them
+// as computed_optional to avoid a "provider produced inconsistent result after
+// apply" error (see behavior.Resolve's identity rule).
+func isIdentity(jsonName, key string) bool {
+	if key == "" {
+		key = "id"
+	}
+	if jsonName == key {
+		return true
+	}
+	return snake(jsonName) == behavior.AccountKey
+}
+
+func buildField(name string, schema *openapi3.Schema, required, identity bool) Field {
 	f := Field{
 		JSONName:    name,
 		AttrName:    snake(name),
@@ -224,7 +239,7 @@ func buildField(name string, schema *openapi3.Schema, required bool) Field {
 		Description: firstLine(schema.Description),
 	}
 	behaviors := fieldBehaviors(schema)
-	f.Semantics = behavior.Resolve(behaviors, required, schema.ReadOnly, schema.WriteOnly)
+	f.Semantics = behavior.Resolve(behaviors, required, schema.ReadOnly, schema.WriteOnly, identity)
 	f.InputOnly = schema.WriteOnly || hasBehavior(behaviors, behavior.InputOnly)
 
 	var refs aipReferences
